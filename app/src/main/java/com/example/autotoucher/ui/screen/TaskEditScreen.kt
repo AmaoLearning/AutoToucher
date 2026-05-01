@@ -176,7 +176,7 @@ fun TaskEditScreen(
                 value = taskName,
                 onValueChange = { taskName = it },
                 label = { Text("任务名称") },
-                placeholder = { Text("如：钉钉上班打卡") },
+                placeholder = { Text("如：每日自动执行") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
