@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 简单的触摸手指图标 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 C50,28 47,31 47,35 L47,60 C44,58 40,58 38,61 C36,64 38,68 41,70 L54,80 C58,83 63,84 68,82 C73,80 76,75 76,70 L76,45 C76,41 73,38 69,38 C68,38 67,38 66,39 C65,36 63,34 60,34 C59,34 58,34 57,35 C56,32 55,28 54,28 Z" />
+</vector>

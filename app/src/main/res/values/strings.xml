@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">AutoToucher</string>
+    <string name="accessibility_service_label">AutoToucher 自动点击</string>
+    <string name="accessibility_service_description">AutoToucher 使用无障碍服务在指定时间自动点击屏幕，用于执行定时预设操作（如打卡）。该服务不会读取或收集您的屏幕内容。</string>
+</resources>

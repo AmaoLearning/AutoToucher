@@ -1,0 +1,4 @@
+<resources>
+    <!-- Activity 窗口主题：无 ActionBar，Compose 接管全部 UI -->
+    <style name="Theme.AutoToucher" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
