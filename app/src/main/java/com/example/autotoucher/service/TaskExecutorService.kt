@@ -20,11 +20,14 @@ import com.example.autotoucher.data.db.AppDatabase
 import com.example.autotoucher.data.model.ActionType
 import com.example.autotoucher.data.repository.TaskRepository
 import com.example.autotoucher.scheduler.AlarmScheduler
+import com.example.autotoucher.ui.WakeActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
@@ -51,6 +54,12 @@ class TaskExecutorService : Service() {
             Intent(context, TaskExecutorService::class.java).apply {
                 putExtra(EXTRA_TASK_ID, taskId)
             }
+
+        // ── 屏幕唤醒协调状态（与 WakeActivity 通信）──────────────
+        /** WakeActivity 屏幕就绪（解锁）后置 true，Service 等待此信号再注入手势 */
+        val keyguardReady = MutableStateFlow(false)
+        /** 任务全部执行完毕后置 true，WakeActivity 收到后自动 finish() */
+        val executionComplete = MutableStateFlow(false)
     }
 
     // ── 生命周期 ────────────────────────────────────────────
@@ -80,12 +89,26 @@ class TaskExecutorService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
+        // 重置协调状态
+        executionComplete.value = false
+        keyguardReady.value = false
+
+        // 启动 WakeActivity：唤亮屏幕并尝试解除锁屏
+        startActivity(
+            Intent(this, WakeActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+
         serviceScope.launch {
             try {
+                // 等待 WakeActivity 发出「屏幕已就绪」信号后再注入手势
+                keyguardReady.first { it }
                 executeTask(taskId)
             } catch (e: Exception) {
                 Log.e(TAG, "Task $taskId failed: ${e.message}", e)
             } finally {
+                executionComplete.value = true  // 通知 WakeActivity 退出
                 stopSelf()
             }
         }

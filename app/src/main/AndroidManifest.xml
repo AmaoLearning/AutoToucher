@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- 精确闹钟（Android 13+，更强豁免） -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- 锁屏唤醒：保持 CPU 唤醒状态直到 WakeActivity 接管 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -65,6 +67,15 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- ── Phase 6：锁屏唤醒 Activity（任务执行前唤亮屏幕 / 解除锁屏）── -->
+        <activity
+            android:name=".ui.WakeActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.AutoToucher.Transparent" />
 
     </application>
 

@@ -1,4 +1,7 @@
 <resources>
     <!-- Activity 窗口主题：无 ActionBar，Compose 接管全部 UI -->
     <style name="Theme.AutoToucher" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- WakeActivity 透明主题：锁屏唤醒时不显示任何 UI，对用户几乎不可见 -->
+    <style name="Theme.AutoToucher.Transparent" parent="android:Theme.Translucent.NoTitleBar.Fullscreen" />
 </resources>
