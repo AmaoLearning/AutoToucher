@@ -1,6 +1,6 @@
 # AutoToucher 用户手册
 
-**版本**：1.0  
+**版本**：1.0.2
 **适用系统**：Android 8.0（API 26）~ Android 16（API 36）
 
 ---
