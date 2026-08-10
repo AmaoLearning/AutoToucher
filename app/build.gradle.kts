@@ -108,4 +108,7 @@ dependencies {
 
     // Core KTX
     implementation("androidx.core:core-ktx:1.16.0")
+
+    // JVM unit tests
+    testImplementation("junit:junit:4.13.2")
 }

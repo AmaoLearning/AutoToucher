@@ -458,6 +458,17 @@ AutoToucher 内置**锁屏唤醒**机制（Phase 6）。任务触发时会自动
 - **步骤间隔不宜过短**：建议最小间隔 ≥ 2 秒，确保每步操作有充分响应时间。
 - **启动延迟打卡场景建议**：打卡类任务建议启动延迟设为 `[0, 300]`（5 分钟内随机），模拟人工操作更真实。
 
+### 命令行 Debug 编译与测试
+
+无需打开 Android Studio。准备 JDK 17+ 和 Android SDK 后，在仓库根目录运行：
+
+```bash
+./scripts/debug_build_and_test.sh
+```
+
+该命令依次运行源码烟雾检查、Debug JVM 单元测试、Android Lint 和 Debug APK
+编译。非发行版 APK 输出到 `app/build/outputs/apk/debug/app-debug.apk`。
+
 ### 隐私说明
 
 AutoToucher 所有数据（任务配置、坐标信息）仅存储在本机 Room 数据库中，不上传至任何服务器。无障碍服务仅用于注入手势，不读取任何界面内容（键盘输入、短信等）。

@@ -76,14 +76,19 @@ object AlarmScheduler {
      * - 若今天 [hour]:[minute] 的时刻 > 当前时间，则触发时间 = 今天该时刻
      * - 否则触发时间 = 明天该时刻
      */
-    internal fun calcNextTriggerMillis(hour: Int, minute: Int): Long {
+    internal fun calcNextTriggerMillis(
+        hour: Int,
+        minute: Int,
+        nowMillis: Long = System.currentTimeMillis()
+    ): Long {
         val cal = Calendar.getInstance().apply {
+            timeInMillis = nowMillis
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
-        if (cal.timeInMillis <= System.currentTimeMillis()) {
+        if (cal.timeInMillis <= nowMillis) {
             cal.add(Calendar.DAY_OF_YEAR, 1)
         }
         return cal.timeInMillis
