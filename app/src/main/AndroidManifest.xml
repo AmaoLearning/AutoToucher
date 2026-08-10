@@ -15,6 +15,8 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- 锁屏唤醒：保持 CPU 唤醒状态直到 WakeActivity 接管 -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Android 14+：ACQUIRE_CAUSES_WAKEUP 的屏幕唤醒权限 -->
+    <uses-permission android:name="android.permission.TURN_SCREEN_ON" />
 
     <application
         android:allowBackup="true"
@@ -74,6 +76,7 @@
             android:exported="false"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
+            android:noHistory="true"
             android:excludeFromRecents="true"
             android:theme="@style/Theme.AutoToucher.Transparent" />
 

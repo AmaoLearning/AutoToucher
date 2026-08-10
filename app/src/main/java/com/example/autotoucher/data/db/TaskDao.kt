@@ -11,8 +11,14 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
 
-    /** 观察所有任务（按触发时间排序），UI 订阅用。 */
-    @Query("SELECT * FROM tasks ORDER BY triggerHour, triggerMinute")
+    /**
+     * 观察所有任务（按创建顺序稳定排列），UI 订阅用。
+     *
+     * id 是自增主键，使用它排序可保证新增任务只追加到列表末尾；不能按触发时间
+     * 排序，否则每次插入较早的时间都会让已有卡片换位，同一时间的任务也没有
+     * 确定顺序。
+     */
+    @Query("SELECT * FROM tasks ORDER BY id ASC")
     fun getAllTasks(): Flow<List<TaskEntity>>
 
     /** 按 ID 查询单个任务（挂起，执行时用）。 */

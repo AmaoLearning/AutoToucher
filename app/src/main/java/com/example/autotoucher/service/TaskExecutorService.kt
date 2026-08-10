@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.autotoucher.MainActivity
@@ -20,7 +21,6 @@ import com.example.autotoucher.data.db.AppDatabase
 import com.example.autotoucher.data.model.ActionType
 import com.example.autotoucher.data.repository.TaskRepository
 import com.example.autotoucher.scheduler.AlarmScheduler
-import com.example.autotoucher.ui.WakeActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.random.Random
 
 /**
@@ -43,23 +44,29 @@ class TaskExecutorService : Service() {
 
     private lateinit var repository: TaskRepository
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var executionWakeLock: PowerManager.WakeLock? = null
 
     companion object {
         private const val TAG = "TaskExecutorService"
         const val EXTRA_TASK_ID = "task_id"
         const val NOTIFICATION_ID = 1001
         const val CHANNEL_ID = "autotoucher_exec"
+        private const val WAKE_READY_TIMEOUT_MS = 10_000L
+        private const val MAX_EXECUTION_WAKE_MS = 10 * 60 * 1000L
 
         fun buildIntent(context: Context, taskId: Int): Intent =
             Intent(context, TaskExecutorService::class.java).apply {
                 putExtra(EXTRA_TASK_ID, taskId)
             }
 
+        /** 由 AlarmReceiver 在启动 WakeActivity 和 Service 前重置本次协调状态。 */
+        fun prepareWakeSession() {
+            keyguardReady.value = false
+        }
+
         // ── 屏幕唤醒协调状态（与 WakeActivity 通信）──────────────
         /** WakeActivity 屏幕就绪（解锁）后置 true，Service 等待此信号再注入手势 */
         val keyguardReady = MutableStateFlow(false)
-        /** 任务全部执行完毕后置 true，WakeActivity 收到后自动 finish() */
-        val executionComplete = MutableStateFlow(false)
     }
 
     // ── 生命周期 ────────────────────────────────────────────
@@ -89,26 +96,22 @@ class TaskExecutorService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
-        // 重置协调状态
-        executionComplete.value = false
-        keyguardReady.value = false
-
-        // 启动 WakeActivity：唤亮屏幕并尝试解除锁屏
-        startActivity(
-            Intent(this, WakeActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        )
+        acquireExecutionWakeLock()
 
         serviceScope.launch {
             try {
-                // 等待 WakeActivity 发出「屏幕已就绪」信号后再注入手势
-                keyguardReady.first { it }
+                // Activity 被 ROM 拦截或系统拒绝解锁时不能永久挂起，否则下一天的
+                // 闹钟也不会重新注册。无密码锁屏通常会在此窗口内完成解除。
+                val ready = withTimeoutOrNull(WAKE_READY_TIMEOUT_MS) {
+                    keyguardReady.first { it }
+                } != null
+                if (!ready) {
+                    Log.w(TAG, "Timed out waiting for screen/keyguard readiness; continuing task.")
+                }
                 executeTask(taskId)
             } catch (e: Exception) {
                 Log.e(TAG, "Task $taskId failed: ${e.message}", e)
             } finally {
-                executionComplete.value = true  // 通知 WakeActivity 退出
                 stopSelf()
             }
         }
@@ -118,6 +121,7 @@ class TaskExecutorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        releaseExecutionWakeLock()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -216,6 +220,37 @@ class TaskExecutorService : Service() {
     /** 在 [min, max] 范围内生成随机整数秒数，min > max 时安全返回 min。 */
     private fun randomDelay(min: Int, max: Int): Int =
         if (max > min) Random.nextInt(min, max + 1) else min
+
+    /**
+     * 窗口的 turnScreenOn 是首选唤醒方式；屏幕 WakeLock 是 API 26 及厂商 ROM 的
+     * 兜底，同时在透明 Activity 退出后保持屏幕可交互。系统超时保证异常退出时
+     * 不会无限耗电。
+     */
+    @Suppress("DEPRECATION")
+    private fun acquireExecutionWakeLock() {
+        if (executionWakeLock?.isHeld == true) return
+        try {
+            val powerManager = getSystemService(PowerManager::class.java)
+            executionWakeLock = powerManager.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "$packageName:task-execution"
+            ).apply {
+                setReferenceCounted(false)
+                acquire(MAX_EXECUTION_WAKE_MS)
+            }
+            Log.i(TAG, "Execution wake lock acquired.")
+        } catch (e: SecurityException) {
+            executionWakeLock = null
+            Log.w(TAG, "Screen wake lock denied; relying on WakeActivity turnScreenOn.", e)
+        }
+    }
+
+    private fun releaseExecutionWakeLock() {
+        executionWakeLock?.let { wakeLock ->
+            if (wakeLock.isHeld) wakeLock.release()
+        }
+        executionWakeLock = null
+    }
 
     // ── 通知构建 ────────────────────────────────────────────
 
